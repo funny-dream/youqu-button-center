@@ -26,6 +26,6 @@ version = { path = "youqu_button_center/__version__.py" }
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "/youqu_dogtail",
+    "/youqu_button_center",
 ]
 
