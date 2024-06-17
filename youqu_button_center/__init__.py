@@ -20,7 +20,7 @@ from youqu_button_center.wayland_wininfo import WaylandWindowInfo
 from youqu_button_center.conf import conf
 
 
-class ApplicationStartError(BaseException):
+class ApplicationStartError(Exception):
     """
     应用程序未启动
     """
@@ -32,10 +32,10 @@ class ApplicationStartError(BaseException):
         """
         err = f"应用程序未启动,{result}"
         logger.error(err)
-        BaseException.__init__(self, err)
+        Exception.__init__(self, err)
 
 
-class GetWindowInformation(BaseException):
+class GetWindowInformation(Exception):
     """获取窗口信息错误"""
 
     def __init__(self, msg):
@@ -43,16 +43,16 @@ class GetWindowInformation(BaseException):
         获取窗口信息错误
         """
         logger.error(msg)
-        BaseException.__init__(self, msg)
+        Exception.__init__(self, msg)
 
 
-class NoSetReferencePoint(BaseException):
+class NoSetReferencePoint(Exception):
     """没有设置参考点"""
 
     def __init__(self, msg):
         err = f"没有设置参考点！| {msg}"
         logger.error(err)
-        BaseException.__init__(self, err)
+        Exception.__init__(self, err)
 
 
 class ButtonCenter:
@@ -63,15 +63,15 @@ class ButtonCenter:
     __author__ = "mikigo <huangmingqiang@uniontech.com>"
 
     def __init__(
-            self, app_name: str, config_path: str, number: int = -1, pause: int = 1, retry: int = 1
+            self, appname: str, config_path: str, number: int = -1, pause: int = 1, retry: int = 1
     ):
         """
-        :param app_name: 系统应用软件包，例如，dde-file-manager
+        :param appname: 系统应用软件包，例如，dde-file-manager
         :param config_path: ui 定位配置文件路径（绝对路径）
         :param number: 默认为 -1, 即最后一个窗口
             如果你想指定不同的窗口，你可以在实例化对象的时候显式的传入 number，第一个为 0
         """
-        self.app_name = app_name
+        self.appname = appname
         self.number = number
         # 每个操作步骤之前暂停的时间
         self.pause = pause
@@ -82,7 +82,7 @@ class ButtonCenter:
         if conf.IS_X11:
             try:
                 app_ids = easyprocess.EasyProcess(
-                    f"xdotool search --classname --onlyvisible {self.app_name}"
+                    f"xdotool search --classname --onlyvisible {self.appname}"
                 ).call().stdout.split("\n")
                 app_id_list = [int(_id) for _id in app_ids if _id]
                 app_id_list.sort()
@@ -91,19 +91,19 @@ class ButtonCenter:
                     f"xwininfo -id {app_id_list[self.number]}",
                 ).call().stdout
             except Exception as exc:
-                raise ApplicationStartError(f"{self.app_name, exc}") from exc
+                raise ApplicationStartError(f"{self.appname, exc}") from exc
 
         elif conf.IS_WAYLAND:
             self.wwininfo = WaylandWindowInfo()
             if hasattr(self.wwininfo.library, "GetAllWindowStatesList"):
                 for _ in range(self.retry + 1):
-                    info = self.wwininfo.window_info().get(self.app_name)
+                    info = self.wwininfo.window_info().get(self.appname)
                     if info is None:
                         sleep(1)
                     else:
                         break
                 else:
-                    raise ApplicationStartError(self.app_name)
+                    raise ApplicationStartError(self.appname)
                 if isinstance(info, dict):
                     return info
                 elif isinstance(info, list):
@@ -133,7 +133,7 @@ class ButtonCenter:
                     else:
                         break
                 else:
-                    raise ApplicationStartError(self.app_name)
+                    raise ApplicationStartError(self.appname)
                 window_width = re.findall(r"Width.*:\s(\d+)", app_window_info)[0]
                 window_height = re.findall(r"Height.*:\s(\d+)", app_window_info)[0]
                 window_x, window_y = result
@@ -147,9 +147,9 @@ class ButtonCenter:
                 else:
                     app_window_info = self.window_info()
                     name = app_window_info.get("name")
-                    if name != self.app_name:
+                    if name != self.appname:
                         raise ValueError(
-                            f"您想要获取的窗口为：{self.app_name}, 但实际获取的窗口为：{name}"
+                            f"您想要获取的窗口为：{self.appname}, 但实际获取的窗口为：{name}"
                         )
                     window_x, window_y, window_width, window_height = app_window_info.get("wininfo")
             logger.debug(
@@ -604,7 +604,7 @@ class ButtonCenter:
             app_id = easyprocess.EasyProcess(cmd).call().stdout.strip()
             return len([i for i in app_id.split("\n") if i])
         else:
-            info = WaylandWindowInfo().window_info().get(self.app_name)
+            info = WaylandWindowInfo().window_info().get(self.appname)
             if isinstance(info, dict):
                 return 1
             elif isinstance(info, list):
@@ -623,7 +623,7 @@ class ButtonCenter:
                 return [i for i in app_id.split("\n") if i]
             raise ApplicationStartError(app_id)
         else:
-            info = self.wwininfo.window_info().get(self.app_name)
+            info = self.wwininfo.window_info().get(self.appname)
             if isinstance(info, dict):
                 return info.get("window_id")
             elif isinstance(info, list):
@@ -636,7 +636,7 @@ class ButtonCenter:
         """
         if conf.IS_WAYLAND:
             return
-        app_id = self.get_windows_id(app_name if app_name else self.app_name)
+        app_id = self.get_windows_id(app_name if app_name else self.appname)
         windows = int(app_id[self.number])
         cmd = f"xdotool windowactivate {windows}"
         easyprocess.EasyProcess(cmd)
@@ -663,7 +663,7 @@ class ButtonCenter:
             except Exception as exc:
                 raise ApplicationStartError(f"{app_name, exc}") from exc
         else:
-            info = WaylandWindowInfo().window_info().get(self.app_name)
+            info = WaylandWindowInfo().window_info().get(self.appname)
             if isinstance(info, dict):
                 return info.get("window_id")
             elif isinstance(info, list):
