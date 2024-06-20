@@ -2,12 +2,11 @@
 # _*_ coding:utf-8 _*_
 # SPDX-FileCopyrightText: 2023 UnionTech Software Technology Co., Ltd.
 # SPDX-License-Identifier: GPL-2.0-only
-
+import os
 import re
 from configparser import ConfigParser, NoSectionError
 from time import sleep
 
-import easyprocess
 from funnylog import logger
 
 from youqu_button_center.install_depends import install_depends
@@ -81,15 +80,15 @@ class ButtonCenter:
     def window_info(self):
         if conf.IS_X11:
             try:
-                app_ids = easyprocess.EasyProcess(
+                app_ids = os.popen(
                     f"xdotool search --classname --onlyvisible {self.appname}"
-                ).call().stdout.split("\n")
+                ).read().strip().split("\n")
                 app_id_list = [int(_id) for _id in app_ids if _id]
                 app_id_list.sort()
                 logger.debug(f"app_id_list: {app_id_list}")
-                return easyprocess.EasyProcess(
+                return os.popen(
                     f"xwininfo -id {app_id_list[self.number]}",
-                ).call().stdout
+                ).read().strip()
             except Exception as exc:
                 raise ApplicationStartError(f"{self.appname, exc}") from exc
 
@@ -601,7 +600,7 @@ class ButtonCenter:
         """
         if conf.IS_X11:
             cmd = f"xdotool search --classname --onlyvisible {name}"
-            app_id = easyprocess.EasyProcess(cmd).call().stdout.strip()
+            app_id = os.popen(cmd).read().strip()
             return len([i for i in app_id.split("\n") if i])
         else:
             info = WaylandWindowInfo().window_info().get(self.appname)
@@ -618,7 +617,7 @@ class ButtonCenter:
         """
         if conf.IS_X11:
             cmd = f"xdotool search --onlyvisible --classname {name}"
-            app_id = easyprocess.EasyProcess(cmd).call().stdout.strip()
+            app_id = os.popen(cmd).read().strip()
             if app_id:
                 return [i for i in app_id.split("\n") if i]
             raise ApplicationStartError(app_id)
@@ -639,7 +638,7 @@ class ButtonCenter:
         app_id = self.get_windows_id(app_name if app_name else self.appname)
         windows = int(app_id[self.number])
         cmd = f"xdotool windowactivate {windows}"
-        easyprocess.EasyProcess(cmd)
+        os.system(cmd)
         logger.debug(f"<{app_name}> 窗口置顶并聚焦")
 
     def get_lastest_window_id(self, app_name: str) -> int:
@@ -650,10 +649,10 @@ class ButtonCenter:
         if conf.IS_X11:
             try:
                 app_id = (
-                    easyprocess.EasyProcess(
+                    os.popen(
                         f"xdotool search --classname --onlyvisible {app_name}",
                     )
-                    .call().stdout
+                    .read()
                     .strip()
                     .split("\n")
                 )
